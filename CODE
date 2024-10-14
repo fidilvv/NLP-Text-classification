@@ -1,0 +1,73 @@
+import nltk
+
+# Download the punkt tokenizer
+nltk.download('punkt')
+# Download stopwords
+nltk.download('stopwords')
+import pandas as pd
+import re
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+# Load the dataset
+df = pd.read_csv(r'C:\Users\Sys-1\Downloads\nlp_dataset.csv')
+
+# Check the column names
+print(df.columns)
+
+# Preprocess function
+def preprocess_text(text):
+    text = text.lower()  # Convert to lowercase
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    text = re.sub(r'\d+', '', text)  # Remove digits
+    tokens = word_tokenize(text)  # Tokenize
+    tokens = [word for word in tokens if word not in stopwords.words('english')]  # Remove stopwords
+    return ' '.join(tokens)
+
+# Apply preprocessing to the 'Comment' column
+df['clean_text'] = df['Comment'].apply(preprocess_text)
+
+# Check the first few rows to confirm preprocessing
+print(df.head())
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Initialize the vectorizer
+vectorizer = TfidfVectorizer(max_features=1000)
+
+# Fit and transform the clean text data
+X = vectorizer.fit_transform(df['clean_text'])
+
+# Labels
+y = df['Emotion']
+
+# Check the shape of the transformed data
+print(X.shape)
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Naive Bayes model
+nb_model = MultinomialNB()
+nb_model.fit(X_train, y_train)
+
+# Train Support Vector Machine model
+svm_model = SVC(kernel='linear')
+svm_model.fit(X_train, y_train)
+from sklearn.metrics import accuracy_score, f1_score
+
+# Naive Bayes Evaluation
+y_pred_nb = nb_model.predict(X_test)
+nb_accuracy = accuracy_score(y_test, y_pred_nb)
+nb_f1 = f1_score(y_test, y_pred_nb, average='weighted')
+
+# Support Vector Machine Evaluation
+y_pred_svm = svm_model.predict(X_test)
+svm_accuracy = accuracy_score(y_test, y_pred_svm)
+svm_f1 = f1_score(y_test, y_pred_svm, average='weighted')
+
+# Print results
+print(f'Naive Bayes - Accuracy: {nb_accuracy:.2f}, F1 Score: {nb_f1:.2f}')
+print(f'SVM - Accuracy: {svm_accuracy:.2f}, F1 Score: {svm_f1:.2f}')
